@@ -9,6 +9,8 @@ from .utils import tzadd, tznow
 import logging
 logger = logging.getLogger(__name__)
 
+from collections import Iterator
+
 
 class Field:
     """
@@ -43,7 +45,7 @@ class Field:
         self._field_type = field_type
 
         self._properties = ['primary_key', 'indexed',
-                'auto_increment', 'auto_now', 'auto_now_add']
+                'auto_increment', 'auto_now', 'auto_now_add', 'allowed_choices']
 
         # create a getter property based on _properties list
         # self.property_name returns self._property_name
@@ -373,3 +375,45 @@ class OneToOneField(ForeignKey):
     pass
 
 # TODO class ManyToManyField
+
+
+class ChoicesField(Field):
+    """
+    holds a list or dict of valid options that can be selected
+    list contains elements in str format and dict as well.
+    """
+
+    @classmethod
+    def check_iter_empty(self, iterable:Iterator):
+        '''checks if iterable is empty(true) or not(false)'''
+        try:
+            iter(iterable).__next__()
+        except StopIteration:
+            return True
+        return False
+        
+
+    def __init__(self, **kw):
+        super(ChoicesField, self).__init__(field_type = Iterator, **kw)
+
+        choices:[list, dict] = kw.get('allowed_choices')
+        
+        if self.check_iter_empty(choices):
+            raise RuntimeError("allowed_choices kwarg cannot be empty")
+        elif type(choices) is list:
+            if all(isinstance(n, str) for n in choices) is False:
+                raise RuntimeError("All fields in list must be str {}".format(choices))
+        elif type(choices is dict):
+            if all(isinstance(n, str) for n in choices.values()) is False:
+                raise RuntimeError("All values in dict must be str {}".format(choices.values()))
+
+    def cast(self, value):
+        if value is None:
+            return None
+        elif value in self.allowed_choices and isinstance(self.allowed_choices, list):
+            return value
+        elif isinstance(self.allowed_choices, dict) and (value in self.allowed_choices.keys()):
+            return self.allowed_choices.get(value)
+        else:
+            raise RuntimeError("Value is not allowed.")
+        return value

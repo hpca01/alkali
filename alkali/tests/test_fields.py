@@ -8,7 +8,7 @@ import json
 import tempfile
 
 from alkali.fields import Field
-from alkali.fields import IntField, StringField, BoolField
+from alkali.fields import IntField, StringField, BoolField, ChoicesField
 from alkali.fields import DateTimeField, FloatField, SetField
 from alkali.fields import UUIDField
 from alkali.fields import ForeignKey, OneToOneField
@@ -413,3 +413,29 @@ class TestField( unittest.TestCase ):
 
         self.assertEqual(creation, m.creation)
         self.assertEqual(modified, m.modified)
+
+    def test_choicesfield(self):
+        simple_list = ['a', 'b', 'c']
+        simple_dict = dict(zip('abc', 'cde'))
+
+        empty_dict = dict()
+        empty_list = []
+
+        list_non_str = ['a', 2, 'c']
+        dict_non_str = dict(zip('abc', range(3)))
+        
+        def test_simple_list():
+            f = ChoicesField(allowed_choices=simple_list)
+            v = f.cast('a')
+            self.assertIn(v, simple_list)
+        
+        def test_simple_dict():
+            f = ChoicesField(allowed_choices=simple_dict)
+            v = f.cast('a')
+            self.assertIn(v, simple_dict.values())
+
+        def test_empty_dict():
+            '''will raise an error during init'''
+            f = ChoicesField(allowed_choices=empty_dict)
+            v = f.cast('a')
+            self.assertIn(v, simple_list)
